@@ -17,3 +17,11 @@ Trotz sorgfältiger Erstellung wird keine Gewähr für die Richtigkeit, Vollstä
 Die Nutzung erfolgt auf eigene Verantwortung. Eine Haftung des Erstellers für Schäden aus der Nutzung ist im gesetzlich zulässigen Umfang ausgeschlossen.
 
 Alle dargestellten Namen, Unternehmen und Geschäftsvorfälle sind fiktiv.
+
+## Urheberrecht / Credits
+
+Das ursprüngliche Projekt wurde von unserem Lehrer bereitgestellt.
+
+Die Veröffentlichung erfolgt anonym durch Schüler.
+
+Die Identität des ursprünglichen Autors bleibt aus Datenschutzgründen geheim.
