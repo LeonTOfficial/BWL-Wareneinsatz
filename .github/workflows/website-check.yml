@@ -1,0 +1,65 @@
+name: Website-Check und Monitoring
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: HTML, JavaScript und Verfügbarkeit prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Repository auschecken (ohne zusätzliche Actions)
+        run: |
+          git init .
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          git fetch --depth 1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+      - name: HTML-Struktur und interne Links prüfen
+        run: python3 scripts/check_site.py
+      - name: JavaScript-Syntax prüfen
+        run: node --check /tmp/wareneinsatz-check.js
+      - name: Öffentliche Webseite prüfen (täglich)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          curl --fail --location --retry 2 --retry-delay 3 --max-time 25 \
+            --output /tmp/wareneinsatz-live.html \
+            https://leontofficial.github.io/BWL-Wareneinsatz/
+          grep -q 'Wareneinsatz' /tmp/wareneinsatz-live.html
+
+  report:
+    name: Bei Fehlern ein Issue erstellen
+    if: always() && (github.event_name == 'schedule') && needs.check.result == 'failure'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Fehler ohne doppelte Issues melden
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title='Automatischer Website-Check fehlgeschlagen'
+          existing="$(gh issue list --repo "$GH_REPO" --state open --search 'in:title Automatischer Website-Check fehlgeschlagen' --json number --jq 'length')"
+          if [ "$existing" = 0 ]; then
+            gh issue create --repo "$GH_REPO" --title "$title" \
+              --body "Der tägliche Website-Check hat einen Fehler erkannt. Bitte den [fehlgeschlagenen Lauf]($RUN_URL) prüfen. Die Webseite wurde nicht automatisch verändert."
+          else
+            echo 'Ein offenes Issue existiert bereits.'
+          fi
